@@ -1,0 +1,64 @@
+﻿@page "/"
+@attribute [Authorize]
+
+@using Chinook.Interface
+@using Chinook.Models
+@using Microsoft.EntityFrameworkCore
+@inject IArtistService ArtistService
+
+<PageTitle>Index</PageTitle>
+
+<h1>Artists</h1>
+
+@if (Artists == null)
+{
+    <Loading />
+}
+else
+{
+
+    <input class="form-control form-control-sm" type="text"
+           @bind-value:event="onchange" @oninput="GetArtistsByNameAsync" @bind-value="Name" placeholder="Type to search by name" />
+
+    <table class="table table-striped table-hover table-sm">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Number of albums</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var artist in Artists)
+            {
+                <tr>
+                    <td><a href="Artist/@artist.ArtistId">@artist.Name</a></td>
+                    <td>@artist.Albums.Count()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Artist> Artists;
+    private string SearchText;
+    private string Name;
+    [Inject] IDbContextFactory<ChinookContext> DbFactory { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InvokeAsync(StateHasChanged);
+        Artists = await ArtistService.GetArtistsAsync();
+    }
+
+    private async Task GetArtistsByNameAsync(ChangeEventArgs args)
+    {
+        Artists = await ArtistService.GetArtistsByNameAsync(args.Value.ToString());
+    }
+
+    public async Task<List<Album>> GetAlbumsForArtist(int artistId)
+    {
+        var dbContext = await DbFactory.CreateDbContextAsync();
+        return dbContext.Albums.Where(a => a.ArtistId == artistId).ToList();
+    }
+}
