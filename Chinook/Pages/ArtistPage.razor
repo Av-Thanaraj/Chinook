@@ -72,6 +72,7 @@ else
         <div class="mb-2">
             <label for="ExistingPlaylist">Add to existing playlist</label>
             <select class="form-control" id="ExistingPlaylist" @onchange="ExistingPlaylistOnChange">
+                <option value=null>--Select playlist--</option>
                 @foreach (var playlist in UserPlaylist)
                 {
                     <option value="@playlist.Name">@playlist.Name</option>
@@ -239,7 +240,7 @@ else
             List<Track> trackList = new List<Track>();
             trackList.Add(selectedTrack);
             await PlaylistService.UpdateAsync(new Models.Playlist { PlaylistId = playLists.PlaylistId, Name = playLists.Name, Tracks = trackList });
-            InfoMessage = $"Track {Artist.Name} - {SelectedTrack.AlbumTitle} - {SelectedTrack.TrackName} added to playlist {{playlist name}}.";
+            InfoMessage = $"Track {Artist.Name} - {SelectedTrack.AlbumTitle} - {SelectedTrack.TrackName} added to playlist {playLists.Name}.";
             PlaylistDialog.Close();
         }
         catch(Exception ex)
