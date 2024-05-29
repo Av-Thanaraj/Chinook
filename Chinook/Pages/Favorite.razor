@@ -1,0 +1,80 @@
+﻿@page "/favorite"
+@attribute [Authorize]
+
+@using Chinook.Interface
+@using Chinook.Models
+@using Chinook.ClientModels
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims;
+@inject IUserPlaylistService UserPlaylistService;
+@inject IPlaylistService PlaylistService;
+
+@if (Tracks == null)
+{
+    <Loading />
+}
+else
+{
+    <table class="table table-striped table-hover table-sm">
+        <thead>
+            <tr>
+                <th>Album title</th>
+                <th>Track name</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var track in Tracks)
+            {
+                <tr>
+                    <td>@track.AlbumTitle</td>
+                    <td>@track.TrackName</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; }
+    [Inject] IDbContextFactory<ChinookContext> DbFactory { get; set; }
+
+    private List<PlaylistTrack> Tracks;
+    private List<Models.Playlist> UserPlaylist;
+    private DbContext DbContext;
+    private PlaylistTrack SelectedTrack;
+    private string InfoMessage;
+    private string CurrentUserId;
+    private string selectedPlaylist;
+    private string createdPlaylist;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InvokeAsync(StateHasChanged);
+        CurrentUserId = await GetUserId();
+        var DbContext = await DbFactory.CreateDbContextAsync();
+
+        UserPlaylist = await PlaylistService.GetPlaylistsByUserIdAsync(CurrentUserId);
+        Tracks = DbContext.Tracks
+            .Include(a => a.Album)
+            .Select(t => new PlaylistTrack()
+                {
+                    AlbumTitle = (t.Album == null ? "-" : t.Album.Title),
+                    TrackId = t.TrackId,
+                    TrackName = t.Name,
+                    UnitPrice = t.UnitPrice,
+                    IsFavorite = t.Playlists.Where(p => p.UserPlaylists.Any(up => up.UserId == CurrentUserId && up.Playlist.Name == "Favorites")).Any()
+                }).Where(x=>x.IsFavorite == true)
+            .ToList();
+    }
+
+    private async Task<string> GetUserId()
+    {
+        var user = (await authenticationState).User;
+        var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
+        return userId;
+    }
+}
